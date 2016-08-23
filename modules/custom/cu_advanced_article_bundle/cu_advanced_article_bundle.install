@@ -1,0 +1,22 @@
+<?php
+
+function cu_advanced_article_bundle_install() {
+  cu_advanced_article_bundle_module_weight();
+}
+
+function cu_advanced_article_bundle_update_7000() {
+  cu_advanced_article_bundle_module_weight();
+}
+
+function cu_advanced_article_bundle_module_weight() {
+  $modules_to_update = array('cu_advanced_article');
+
+  foreach ($modules_to_update as $module) {
+    // Set the weight to 1
+    db_update('system')
+    ->fields(array('weight' => 1))
+    ->condition('type', 'module')
+    ->condition('name', $module)
+    ->execute();
+  }
+}

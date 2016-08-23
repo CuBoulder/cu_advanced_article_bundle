@@ -1,0 +1,377 @@
+<?php
+/**
+ * @file
+ * Code for the Advanced Article feature.
+ */
+
+include_once 'cu_advanced_article.features.inc';
+
+/**
+ * Implements hook_theme_registry_alter().
+ *
+ * Let Drupal know we have template files in this module.
+ */
+function cu_advanced_article_theme_registry_alter(&$theme_registry) {
+  $module_path = drupal_get_path('module', 'cu_advanced_article');
+  $theme_registry_copy = $theme_registry;
+  _theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'node', $module_path);
+  $theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
+  $hooks = array('node');
+  foreach ($hooks as $h) {
+    if (isset($theme_registry[$h]['theme paths'])) {
+      $first_element = array_shift($theme_registry[$h]['theme paths']);
+      array_unshift($theme_registry[$h]['theme paths'], array_shift($theme_registry[$h]['theme paths']), $module_path);
+    }
+  }
+}
+
+/**
+ * Implements module_preprocess_node().
+ *
+ * Add template suggestions for advacned articles.
+ * Process audo field to render & display soundcloud embed codes.
+ */
+function cu_advanced_article_preprocess_node(&$vars) {
+
+
+  // Only preprocess articles where the field_adv_article_audio is !empty
+  if ($vars['type'] == 'article' && !empty($vars['field_adv_article_audio'])) {
+    // Soundcloud embed url
+    $soundcloud_url = 'w.soundcloud.com';
+
+    // Step through each field_adv_article_audio instance
+    foreach ($vars['field_adv_article_audio'] as $key => $value) {
+      $embed = $vars['field_adv_article_audio'][$key]['value'];
+      $embed_txt = $vars['field_adv_article_audio'][$key]['safe_value'];
+
+      // Match for embed code url
+      $re1='.*?';	# Non-greedy match on filler
+      $re2='((?:http|https)(?::\\/{2}[\\w]+)(?:[\\/|\\.]?)(?:[^\\s"]*))';	# HTTP URL 1
+
+      if ($c=preg_match_all ("/".$re1.$re2."/is", $embed, $matches)) {
+          $httpurl1=$matches[1][0];
+
+          // Match for the domain within the url
+          $re1='.*?';	# Non-greedy match on filler
+          $re2='((?:[a-z][a-z\\.\\d\\-]+)\\.(?:[a-z][a-z\\-]+))(?![\\w\\.])';	# Fully Qualified Domain Name 1
+
+          if ($c=preg_match_all ("/".$re1.$re2."/is", $httpurl1, $matches))
+          {
+              $fqdn1=$matches[1][0];
+
+              // If domain matches the soundcloud url, convert from plain text to HTML
+              if ($fqdn1 == $soundcloud_url) {
+                $vars['content']['field_adv_article_audio'][$key]['#markup'] = $embed;
+              }
+              // If this does not match, remove from display
+              else {
+
+                if (user_access('create article content')) {
+                  unset($vars['content']['field_adv_article_audio'][$key]);
+                  _cu_advanced_article_error_msg($embed_txt);
+                }
+              }
+          }
+          else {
+            unset($vars['content']['field_adv_article_audio'][$key]);
+            _cu_advanced_article_error_msg($embed_txt);
+          }
+      }
+      else {
+        unset($vars['content']['field_adv_article_audio'][$key]);
+        _cu_advanced_article_error_msg($embed_txt);
+      }
+    }
+  }
+
+  //Add template suggestions
+  if ($vars['type'] == 'article') {
+    // Load nodes layout entity
+    $layout = entity_load_single('express_layout', $vars['nid']);
+    // Check to see if one of the advanced fields has been used
+    if (!empty($vars['field_adv_article_audio']) || !empty($vars['field_adv_article_video']) || !empty($vars['field_adv_article_image']) || !empty($vars['field_adv_article_gallery']) || !empty($vars['field_adv_article_quote']) || !empty($vars['field_adv_article_highlights'])) {
+      // Only add if the article is still in default layout mode
+      $feature = 0;
+      if ($vars['view_mode'] == 'full') {
+        if ($layout->field_feature_layout_toggle[LANGUAGE_NONE][0]['value'] == 'feature_layout' && !path_is_admin(current_path())) {
+          $vars['theme_hook_suggestions'][] = 'node__article__featurelayout__advanced';
+          $feature = 1;
+        }
+        else {
+          $vars['theme_hook_suggestions'][''] = 'node__article__advanced';
+        }
+      }
+      // Get order of advanced fields, only add fields that are set to display
+      $fields = _cu_advanced_article_display_fields();
+      $weights = array();
+      // Container for the fields that will be displayed
+      $fields_to_display = array();
+      foreach ($fields as $field) {
+        $field_weight = $field . '_w';
+        $field_display = $field . '_d';
+        if ($vars[$field_display][LANGUAGE_NONE][0]['value']) {
+          $weights[$field] = $vars[$field_weight][LANGUAGE_NONE][0]['value'];
+          $fields_to_display[$field] = $field;
+        }
+
+      }
+      // Put content in order
+      asort($weights);
+      $vars['advanced_content_order'] = $weights;
+      // Get the priority field
+      if (!empty($vars['field_adv_article_priority'])) {
+        $priority_field = $vars['field_adv_article_priority'][LANGUAGE_NONE][0]['value'];
+        // Get the first item of the priority field
+        $vars['content']['priority'] = $vars['content'][$priority_field][0];
+        // Remove the first item of the priority field so it doesn't print twice
+        unset($vars['content'][$priority_field][0]);
+
+        // Set image style for priority image
+        if ($priority_field == 'field_adv_article_image') {
+          $priority_key = key($vars['content']['priority']['entity']['field_collection_item']);
+          if (isset($vars['content']['priority']['entity']['field_collection_item'][$priority_key]['field_adv_article_fc_image'])) {
+            $vars['content']['priority']['entity']['field_collection_item'][$priority_key]['field_adv_article_fc_image'][0]['#image_style'] = 'advanced_article_hero';
+          }
+        }
+      }
+
+
+      // Check to see if article sidebar is needed
+      $sidebar = 0;
+      foreach ($fields as $field) {
+        // Check to see if field is empty
+        if (!empty($vars['content'][$field])) {
+          // Field must have items and be set to display
+          if (
+            (!empty($vars['content'][$field][0]) || !empty($vars['content'][$field][1])) && isset($fields_to_display[$field])
+            ) {
+            $sidebar = 1;
+          }
+        }
+
+      }
+      if ($sidebar && !$feature) {
+        $vars['theme_hook_suggestions'][] = 'node__article__advanced_sidebar';
+      }
+
+    }
+  }
+  // Add more link to photo gallery if there are more than 6 photos
+  if ($vars['type'] == 'photo_gallery') {
+    if (count($vars['field_photo'][LANGUAGE_NONE]) > 6 && $vars['view_mode'] == 'embed') {
+      $vars['content']['more_link']['#markup'] = l('View all photos', 'node/' . $vars['nid']);
+      $vars['content']['more_link']['#weight'] = 101;
+    }
+  }
+}
+
+function _cu_advanced_article_error_msg($embed) {
+  // drupal_set_message($embed . ' is not a valid soundcloud URL');
+}
+//article_node_form
+function cu_advanced_article_form_article_node_form_alter(&$form, &$form_state, $form_id) {
+  // Get advanced display fields
+  $display_fields = _cu_advanced_article_display_fields();
+
+  // Build new fieldset for display/weight of advanced display settings
+  $form['advanced_article_priority']['#tree'] = TRUE;
+  $form['advanced_article_priority']['#title'] = t('Advanced Article Display');
+  foreach ($display_fields as $field) {
+    $display_field = $field . '_d';
+    $weight_field = $field . '_w';
+    $field_container = $field . '_container';
+    // Add field name
+    $form['advanced_article_priority'][$field]['name'] = array(
+      '#markup' => $form[$field][LANGUAGE_NONE]['#title'],
+    );
+    // Add display toggle
+    $form['advanced_article_priority'][$field]['display'][$display_field] = $form[$display_field];
+    // Add weight
+    $default_weight = $form[$weight_field][LANGUAGE_NONE][0]['value']['#default_value'];
+    $form['advanced_article_priority'][$field]['weight'][$weight_field] = array(
+      '#type' => 'weight',
+      '#title' => t('Weight'),
+      '#default_value' => $default_weight,
+      '#delta' => 5,
+      '#title_display' => 'invisible',
+    );
+    $form['advanced_article_priority'][$field]['#weight'] = $default_weight;
+    // Unset original fields
+    unset($form[$display_field]);
+    unset($form[$weight_field]);
+  }
+  // Sort advanced display fields by default/saved weight
+  uasort($form['advanced_article_priority'], function($a, $b) {
+    return $a['#weight'] - $b['#weight'];
+  });
+
+  // Add validation function to map new fields back to original fields to save properly
+  $form['#validate'][] = 'cu_advanced_article_validate';
+
+  // Add js to move tabledrag field(s) to the advanced tab
+  $form['#attached']['js'] = array(
+  drupal_get_path('module', 'cu_advanced_article') . '/js/cu-advanced-article-form.js');
+}
+
+/**
+ * List fields that will be altered
+ */
+function _cu_advanced_article_display_fields() {
+  $display_fields = array(
+    'field_adv_article_image',
+    'field_adv_article_video',
+    'field_adv_article_audio',
+    'field_adv_article_quote',
+    'field_adv_article_gallery',
+  );
+  return $display_fields;
+}
+/**
+ * Remap altered fields back to their original positions for saving
+ */
+function cu_advanced_article_validate($form, &$form_state) {
+
+  $fields = _cu_advanced_article_display_fields();
+  foreach ($fields as $field) {
+    $display_field = $field . '_d';
+    $weight_field = $field . '_w';
+    $form_state['values'][$display_field] = $form_state['values']['advanced_article_priority'][$field]['display'][$display_field];
+    $form_state['values'][$weight_field][LANGUAGE_NONE][0]['value'] = $form_state['values']['advanced_article_priority'][$field]['weight'][$weight_field];
+
+  }
+  unset($form_state['values']['advanced_article_priority']);
+}
+/**
+ * Implements hook_theme().
+ */
+function cu_advanced_article_theme() {
+  return array(
+    'article_node_form' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Theme function for article_node_form()
+ */
+function theme_article_node_form($variables) {
+  $form = $variables['form'];
+
+  // Initialize the variable which will store our table rows.
+  $rows = array();
+
+  // Iterate over each element in our $form['cu_share_settings'] array.
+  foreach (element_children($form['advanced_article_priority']) as $id) {
+
+    // Before we add our 'weight' column to the row, we need to give the
+    // element a custom class so that it can be identified in the
+    // drupal_add_tabledrag call.
+    $form['advanced_article_priority'][$id]['weight'][$id . '_w']['#attributes']['class'] = array('advanced-article-item-weight');
+
+    // We are now ready to add each element of our $form data to the $rows
+    // array, so that they end up as individual table cells when rendered
+    // in the final table.  We run each element through the drupal_render()
+    // function to generate the final html markup for that element.
+    $rows[] = array(
+      'data' => array(
+        // Add our 'name' column.
+        drupal_render($form['advanced_article_priority'][$id]['name']),
+        // Add our 'enabled' column.
+        drupal_render($form['advanced_article_priority'][$id]['display'][$id .'_d']),
+        // Add our 'weight' column.
+        drupal_render($form['advanced_article_priority'][$id]['weight'][$id . '_w']),
+      ),
+      // To support the tabledrag behaviour, we need to assign each row of the
+      // table a class attribute of 'draggable'. This will add the 'draggable'
+      // class to the <tr> element for that row when the final table is
+      // rendered.
+      'class' => array('draggable'),
+    );
+  }
+
+  // We now define the table header values.  Ensure that the 'header' count
+  // matches the final column count for your table.
+  $header = array(t('Name'), t('Enabled'), t('Weight'));
+
+  // We also need to pass the drupal_add_tabledrag() function an id which will
+  // be used to identify the <table> element containing our tabledrag form.
+  // Because an element's 'id' should be unique on a page, make sure the value
+  // you select is NOT the same as the form ID used in your form declaration.
+  $table_id = 'advanced-article-item-weight-table';
+
+  // We can render our tabledrag table for output.
+  $output = theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => $table_id),
+    'caption' => isset($form['advanced_article_priority']['#description']) ? $form['advanced_article_priority']['#description'] : '',
+  ));
+
+  // Insert table back into form
+  $form['advanced_article_display']['#markup'] = $output;
+  $form['advanced_article_display']['#prefix'] = '<div id="advanced-article-display"><label>Article Display Settings</label>';
+
+  $form['advanced_article_display']['#suffix'] = '</div>';
+  // And then render any remaining form elements (such as our submit button).
+  $output = drupal_render_children($form);
+
+  // We now call the drupal_add_tabledrag() function in order to add the
+  // tabledrag.js goodness onto our page.
+  //
+  // For a basic sortable table, we need to pass it:
+  // - the $table_id of our <table> element,
+  // - the $action to be performed on our form items ('order'),
+  // - a string describing where $action should be applied ('siblings'),
+  // - and the class of the element containing our 'weight' element.
+  drupal_add_tabledrag($table_id, 'order', 'sibling', 'advanced-article-item-weight');
+
+  return $output;
+}
+
+/**
+ * List fields that will be altered
+ */
+function _cu_advanced_article_display_priority_options() {
+  $options = array(
+    'field_adv_article_image' => 'Image',
+    'field_adv_article_video' => 'Video',
+    'field_adv_article_audio' => 'Audio',
+    'field_adv_article_quote' => 'Quote/Text',
+    'field_adv_article_gallery' => 'Photo Gallery',
+  );
+  return $options;
+}
+
+/**
+ * Implements hook_image_default_styles().
+ */
+function cu_advanced_article_image_default_styles() {
+  $styles = array();
+
+  // Exported image style: square.
+  $styles['advanced_article_hero'] = array(
+    'name' => 'Advanced Article Hero',
+    'label' => 'Advanced Article Hero',
+    'effects' => array(
+      11 => array(
+        'label' => 'Focal Point Scale And Crop',
+        'help' => 'Scale and crop based on data provided by <em>Focal Point</em>.',
+        'effect callback' => 'focal_point_scale_and_crop_effect',
+        'dimensions callback' => 'image_resize_dimensions',
+        'form callback' => 'image_resize_form',
+        'summary theme' => 'image_resize_summary',
+        'module' => 'focal_point',
+        'name' => 'focal_point_scale_and_crop',
+        'data' => array(
+          'width' => 1500,
+          'height' => 600,
+          'upscale' => 1,
+        ),
+        'weight' => 2,
+      ),
+    ),
+  );
+
+  return $styles;
+}

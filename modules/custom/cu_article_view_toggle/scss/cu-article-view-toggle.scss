@@ -1,0 +1,106 @@
+.article-grid-list h3 {
+  font-size: 100%;
+}
+.article-grid-list-filter {
+  position: relative;
+  background-color: #f2f2f2;
+  padding:10px 10px 0;
+  margin-bottom: 20px;
+  .article-list-filter {
+    padding-left: 92px;
+    background-color:transparent;
+    padding: 0;
+    padding-right:100px;
+    display: inline-block;
+    margin-bottom: 0px;
+  }
+}
+.block-section-background-black,
+.block-section-background-dark_gray {
+  .article-grid-list-filter {
+    background-color: #444;
+  }
+  .article-toggle-navigation a:link,
+  .article-toggle-navigation a:visited {
+    color:#ccc;
+  }
+  .article-toggle-navigation a.active {
+    color:#fff;
+  }
+  a.button-ghost:link,
+  a.button-ghost:visited {
+    border-color: #cfb87c;
+    color:#fff;
+  }
+  a.button-ghost:hover {
+    border-color: #007bc8;
+  }
+}
+
+.article-toggle-navigation {
+  overflow: hidden;
+  text-align: left;
+  // padding: 10px 0;
+  display: inline-block;
+  margin-right:10px;
+  margin-bottom: 4px;
+}
+.has-exposed-filter .article-toggle-navigation {
+  position:absolute;
+  top:10px;
+  right:0;
+}
+.article-toggle-navigation ul,
+.article-toggle-navigation ul li {
+  list-style: none;
+  list-style-image: none;
+  margin:0;
+  padding:0;
+  display: inline;
+}
+.article-toggle-navigation ul li {
+  //display: inline;
+}
+.article-toggle-navigation a:link,
+.article-toggle-navigation a:visited {
+  display: inline-block;
+  padding: 5px 10px;
+  color:#333;
+}
+.article-toggle-navigation a.active {
+  color:#fff;
+  background-color: #333;
+}
+.article-view-toggle-link .more-link {
+  text-align: center;
+}
+.article-grid-item {
+  margin-bottom: 20px;
+}
+
+.article-grid-list {
+  @media (min-width: 1200px) {
+    .col-lg-6:nth-child(2n+1),
+    .col-lg-4:nth-child(3n+1),
+    .col-lg-3:nth-child(4n+1),
+    .col-lg-5c:nth-child(5n+1) {
+      clear:left;
+    }
+  }
+  @media (min-width: 960px) and (max-width: 1199px){
+    .col-md-6:nth-child(2n+1),
+    .col-md-4:nth-child(3n+1),
+    .col-md-3:nth-child(4n+1),
+    .col-md-5c:nth-child(5n+1) {
+      clear:left;
+    }
+  }
+  @media (min-width: 768px) and (max-width: 959px){
+    .col-sm-6:nth-child(2n+1),
+    .col-sm-4:nth-child(3n+1),
+    .col-sm-3:nth-child(4n+1),
+    .col-sm-5c:nth-child(5n+1) {
+      clear:left;
+    }
+  }
+}

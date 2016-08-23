@@ -1,0 +1,27 @@
+.article-adv-content-field { font-size: 85%; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #d7d7d7; }
+.article-adv-content-field p:last-child, .article-adv-content-field blockquote:last-child { margin-bottom: 0; }
+.article-adv-content-field > .field .field-item { margin-bottom: 20px; }
+.article-adv-content-field > .field div.field-item:last-child { margin-bottom: 0; }
+.article-adv-content-field img { width: 100%; height: auto; }
+.article-adv-content-field .view-photo-gallery .views-row { width: 50%; float: left; display: inline; padding: 0; padding: 0 10px 10px; }
+.article-adv-content-field .view-photo-gallery .views-row img { width: 100%; height: auto; }
+.article-adv-content-field .node-view-mode-embed { padding: 0; margin: 0; border-bottom: none; }
+
+div.article-adv-content-field:last-child { border-bottom: none; }
+
+.advanced-article-priority-content { margin-bottom: 20px; }
+.advanced-article-priority-content img { width: 100%; height: auto; }
+.advanced-article-priority-content .node-view-mode-embed-summary:empty { display: none; }
+.advanced-article-priority-content .gallery-view-mode-embed .node-title { display: none; }
+.advanced-article-priority-content .view-photo-gallery .view-content { margin: 0; }
+.advanced-article-priority-content .view-photo-gallery .views-row { width: 33.3%; float: left; display: inline; padding: 0; padding: 0; }
+.advanced-article-priority-content .view-photo-gallery .views-row img { width: 100%; max-width: auto; height: auto; margin: 0; }
+@media screen and (min-width: 480px) { .advanced-article-priority-content .view-photo-gallery .views-row { width: 16.6%; } }
+
+.field-name-field-adv-article-highlights { margin-bottom: 20px; border-bottom: 1px solid #d7d7d7; padding-bottom: 20px; font-size: 110%; }
+.field-name-field-adv-article-highlights .field-item { margin-bottom: 20px; }
+.field-name-field-adv-article-highlights div.field-item:last-child { margin-bottom: 0; }
+
+.field-name-field-adv-article-downloads { margin-bottom: 20px; border: 1px solid #d7d7d7; padding: 20px; list-style: none; list-style-image: none; }
+.field-name-field-adv-article-downloads li { list-style: none; list-style-image: none; padding: 0; margin: 0 0 10px; }
+.field-name-field-adv-article-downloads li:last-child { margin: 0; }

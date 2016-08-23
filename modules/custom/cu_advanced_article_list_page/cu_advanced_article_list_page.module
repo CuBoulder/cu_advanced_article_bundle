@@ -1,0 +1,247 @@
+<?php
+/**
+ * @file
+ * Code for the Advanced Article List Page feature.
+ */
+
+include_once 'cu_advanced_article_list_page.features.inc';
+
+function cu_advanced_article_list_page_preprocess_node(&$vars) {
+  if ($vars['node']->type == 'advanced_article_list_page') {
+    // Start query.
+    $query = db_select('node', 'n');
+    $query->condition('n.type', 'article', '=');
+    $query->condition('n.status', 1, '=');
+    $query->fields('n', array('nid', 'title', 'sticky'));
+    $query = $query->extend('PagerDefault')->limit(10);
+
+    // Filter by tag.
+    if ($_GET['tags']) {
+      $terms = array();
+      $terms[$tid] = check_plain($_GET['tags']);
+      $tid = check_plain($_GET['tags']);
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('tags');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+      $query->join("field_data_field_tags", "tags", "n.nid = tags.entity_id");
+      $query->fields('tags', array('field_tags_tid'));
+      $query->condition('tags.field_tags_tid', $terms, 'in');
+    }
+
+    // Filter by category.
+    if ($_GET['category']) {
+      $terms = array();
+      $terms[$tid] = check_plain($_GET['category']);
+      $tid = check_plain($_GET['category']);
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('category');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+      $query->join("field_data_field_article_categories", "cats", "n.nid = cats.entity_id");
+      $query->fields('cats', array('field_article_categories_tid'));
+      $query->condition('cats.field_article_categories_tid', $terms, 'in');
+    }
+
+    // Filter by media.
+    if ($_GET['media']) {
+      $terms = array();
+      $terms[$tid] = check_plain($_GET['media']);
+      $tid = check_plain($_GET['media']);
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('media');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+      $query->join("field_data_field_adv_article_media", "media", "n.nid = media.entity_id");
+      $query->fields('media', array('field_adv_article_media_tid'));
+      $query->condition('media.field_adv_article_media_tid', $terms, 'in');
+    }
+    // Filter by audience.
+    if ($_GET['audience']) {
+      $terms = array();
+      $terms[$tid] = check_plain($_GET['audience']);
+      $tid = check_plain($_GET['audience']);
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('audience');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+      $query->join("field_data_field_adv_article_synd_aud", "audience", "n.nid = audience.entity_id");
+      $query->fields('audience', array('field_adv_article_synd_aud_tid'));
+      $query->condition('audience.field_adv_article_synd_aud_tid', $terms, 'in');
+    }
+
+    $query->distinct();
+    $query->groupBy('n.nid');
+    // Display the newest first.
+    $query->orderBy('sticky', 'DESC');
+    $query->orderBy('created', 'DESC');
+    $nids = $query->execute()->fetchCol();
+    $nodes = node_load_multiple($nids);
+
+
+    if (!empty($nodes)) {
+      $rows = array();
+      // Pass a tag type to use for node titles - this is used in the article node tpl
+      foreach ($nodes as $key => $node) {
+        $nodes[$key]->heading_tag['#tag'] = 'h2';
+      }
+      $output['article_list'] = node_view_multiple($nodes, 'teaser');
+      $output['article_list']['#weight'] = 10;
+
+
+
+      $output['pager'] = array(
+          '#theme' => 'pager',
+          '#tags' => array(),
+          '#weight' => 100.
+    );
+
+      if (isset($output)) {
+        $vars['content'] = $output;
+      }
+    }
+    else {
+      $vars['content'] = array();
+      $vars['content']['error']['#markup'] = variable_get('articles_no_results', 'There are no articles that match your search.');
+      $vars['content']['error']['#weight'] = 15;
+    }
+    // Add exposed filter
+    $variables = array(
+      'expose_category_filter' => $vars['field_article_page_cat_expose'][LANGUAGE_NONE][0]['value'],
+
+      'article_category_prefilter' => $vars['field_article_page_category'][LANGUAGE_NONE],
+
+      'expose_tag_filter' => $vars['field_article_page_tag_expose'][LANGUAGE_NONE][0]['value'],
+
+      'article_tag_prefilter' => $vars['field_article_page_filter'][LANGUAGE_NONE],
+
+      'expose_media_filter' => $vars['field_article_page_media_expose'][LANGUAGE_NONE][0]['value'],
+
+      'article_media_prefilter' => $vars['field_article_page_media'][LANGUAGE_NONE],
+
+      'expose_audience_filter' => $vars['field_article_page_aud_expose'][LANGUAGE_NONE][0]['value'],
+
+      'article_audience_prefilter' => $vars['field_article_page_audience'][LANGUAGE_NONE],
+
+      'child_terms' => $vars['field_article_page_childterms'][LANGUAGE_NONE][0]['value'],
+
+    );
+    $vars['content']['exposed_filter'] = drupal_get_form('cu_advanced_article_list_page_filter_form', $variables);
+    $vars['content']['exposed_filter']['#weight'] = 5;
+  }
+}
+
+function cu_advanced_article_list_page_filter_form($form, &$form_state, $vars) {
+  $form = array();
+  $node = menu_get_object();
+  $filters = array();
+  $filter_count = 0;
+  //$node = menu_get_object();
+  $show_category_filter = $vars['expose_category_filter'];
+  $show_tag_filter = $vars['expose_tag_filter'];
+  $show_media_filter = $vars['expose_media_filter'];
+  $show_audience_filter = $vars['expose_audience_filter'];
+  $child_terms = $vars['child_terms'] == 'all' ? 1 : 0;
+
+  // Build category filter options
+  if ($show_category_filter) {
+    $filters['category']['name'] = 'Category';
+    $filters['category']['vocabulary'] = 'category';
+    $filters['category']['pre_filters'] = cu_article_pre_filter_map( $node->field_article_page_category[LANGUAGE_NONE], 'category', $child_terms);
+  }
+  // Build tag filter options
+  if ($show_tag_filter) {
+    $filters['tags']['name'] = 'Tag';
+    $filters['tags']['vocabulary'] = 'tags';
+    $filters['tags']['pre_filters'] = cu_article_pre_filter_map( $node->field_article_page_filter[LANGUAGE_NONE], 'tags', $child_terms);
+  }
+  // Build media filter options
+  if ($show_media_filter) {
+    $filters['media']['name'] = 'Media';
+    $filters['media']['vocabulary'] = 'media';
+    $filters['media']['pre_filters'] = cu_article_pre_filter_map( $node->field_article_page_media[LANGUAGE_NONE], 'media', $child_terms);
+  }
+  // Build audience filter options
+  if ($show_audience_filter) {
+    $filters['audience']['name'] = 'Audience';
+    $filters['audience']['vocabulary'] = 'syndication_audience';
+    $filters['audience']['pre_filters'] = cu_article_pre_filter_map( $node->field_article_page_audience[LANGUAGE_NONE], 'syndication_audience', $child_terms);
+  }
+  // Build filters if they exist
+  if (!empty($filters)) {
+    foreach ($filters as $key => $filter) {
+      // Load vocabulary for filter
+      $vocabulary = taxonomy_vocabulary_machine_name_load($filter['vocabulary']);
+      $options = array();
+      // Add 'all' option
+      $options[] = 'All';
+
+      // Get terms for vocabulary
+      $terms = taxonomy_get_tree($vocabulary->vid);
+
+      // Get terms in a nested tree
+      $terms = cu_article_taxonomy_treedata($terms);
+
+      // Build select options from nested tree and add all option
+      $options = $options + cu_article_nested_options($terms);
+
+      // If pre_filters were added, only show those options
+      if (!empty($filter['pre_filters'])) {
+        $options = array_intersect_key($options, $filter['pre_filters']);
+      }
+
+      // Only show filter if there are more than 2 choices (all + 2)
+      if (count($options) > 2) {
+        $filter_count++;
+        $form['article_list_filter'][$key] = array(
+         '#type' => 'select',
+         '#title' => t($filter['name']),
+         '#options' => $options,
+         '#default_value' => isset($_GET[$key]) ? $_GET[$key] : '',
+        );
+      }
+    }
+
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => 'Filter',
+    );
+    $form['#submit'][] = 'cu_advanced_article_list_page_filter_form_submit';
+    $form['#prefix'] = '<div class="article-list-filter"><label class="element-invisible">Article Filter</label>';
+    $form['#suffix'] = '</div>';
+  }
+  // Return form if there is at least 1 exposed filter
+  if ($filter_count) {
+    return $form;
+  }
+}
+
+function cu_advanced_article_list_page_filter_form_submit($form, &$form_state) {
+  // Get current node
+  $node = menu_get_object();
+  // Get the nid
+  $nid = $node->nid;
+
+  // Get filters if they were submitted
+  foreach (array('tags', 'category', 'media', 'audience') as $name) {
+    if (!empty($form_state['values'][$name])) {
+      $keys[$name] = $form_state['values'][$name];
+    }
+  }
+
+  // Build new url with filter parameters
+  $options = array();
+  if (isset($keys)) {
+    $options['query'] = $keys;
+  }
+  $form_state['redirect'] = array('node/' . $nid, $options);
+  return;
+}

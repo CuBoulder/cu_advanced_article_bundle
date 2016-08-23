@@ -1,0 +1,329 @@
+<?php
+
+function cu_article_syndicate_menu() {
+  $items = array();
+  $items['syndicate/article'] = array(
+    'title' => 'Article Syndication',
+    'description' => 'JSON Feed of article content',
+    'page callback' => 'cu_article_syndicate_feed',
+    'access callback' => TRUE,
+    'delivery callback' =>  'drupal_json_output',
+  );
+  $items['syndicate/article/read'] = array(
+    'title' => variable_get('article_syndication_page', 'Campus News'),
+    'page callback' => 'cu_article_syndicate_results',
+    'access callback' => TRUE,
+    'delivery callback' => 'drupal_deliver_html_page',
+  );
+  $items['syndicate/article/options/%'] = array(
+    'title' => 'Article Syndication',
+    'description' => 'JSON Feed of article content',
+    'page callback' => 'cu_article_syndicate_feed_options',
+    'page arguments' => array(3),
+    'access callback' => TRUE,
+    'delivery callback' =>  'drupal_json_output',
+  );
+
+  return $items;
+}
+
+function cu_article_syndicate_access() {
+  $access = variable_get('allow_article_syndication', TRUE);
+  //$access = FALSE;
+  return $access;
+}
+
+/**
+ * Callback function for 'syndicate/article'.
+ *
+ * Returns JSON of articles.
+ */
+function cu_article_syndicate_feed($unit, $audience, $category, $view_mode = 'teaser') {
+
+  if (!cu_article_syndicate_access()) {
+    return array('error' => 'Syndication is disabled');
+  }
+
+  // Build cache ID
+  $path = current_path();
+  $query = $_GET;
+  $cid = 'cu_article_syndicate:' . url($path, array('query' => $query));
+
+  // If this request was cached, return the cached value
+  if ($cache = cache_get($cid)) {
+    return $cache->data;
+  }
+
+
+  $output = array();
+  // Start basic query of published articles
+  $query = db_select('node', 'n');
+  if ($_GET['items']) {
+    $items = check_plain($_GET['items']);
+  }
+  else {
+    $items = 10;
+  }
+  $query->range(0, $items);
+  $query->condition('n.type', 'article', '=');
+  $query->condition('n.status', 1, '=');
+  $query->fields('n', array('nid', 'title', 'sticky'));
+  $query->orderBy('sticky', 'DESC');
+  $query->orderBy('created', 'DESC');
+
+  // Add condition for unit
+  if ($_GET['unit']) {
+    $unit = check_plain($_GET['unit']);
+    $terms = array();
+    $unit = explode('+', $unit);
+    foreach ($unit as $key=>$value) {
+      $tid = $value;
+      $terms[$tid] = $tid;
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('syndication_unit');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+    }
+    if (!empty($terms)){
+      $query->join("field_data_field_adv_article_synd_unit", "unit", "n.nid = unit.entity_id");
+      $query->fields('unit', array('field_adv_article_synd_unit_tid'));
+      $query->condition('unit.field_adv_article_synd_unit_tid', $terms, 'in');
+    }
+  }
+
+  // Add condition for audience
+  if ($_GET['audience']) {
+    $audience = check_plain($_GET['audience']);
+    $terms = array();
+    $audience = explode('+', $audience);
+    foreach ($audience as $key=>$value) {
+      $tid = $value;
+      $terms[$tid] = $tid;
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('syndication_audience');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+    }
+    if (!empty($terms)){
+      $query->join("field_data_field_adv_article_synd_aud", "aud", "n.nid = aud.entity_id");
+      $query->fields('aud', array('field_adv_article_synd_aud_tid'));
+      $query->condition('aud.field_adv_article_synd_aud_tid', $terms, 'in');
+    }
+  }
+
+  // Add condition for category
+  if ($_GET['category']) {
+    $category = check_plain($_GET['category']);
+    $terms = array();
+    $category = explode('+', $category);
+    foreach ($category as $key=>$value) {
+      $tid = $value;
+      $terms[$tid] = $tid;
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('category');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+    }
+    if (!empty($terms)){
+      $query->join("field_data_field_article_categories", "cats", "n.nid = cats.entity_id");
+      $query->fields('cats', array('field_article_categories_tid'));
+      $query->condition('cats.field_article_categories_tid', $terms, 'in');
+    }
+  }
+
+  // Make sure only one instance of each article is returned
+  $query->distinct();
+  $query->groupBy('n.nid');
+  $nids = $query->execute()->fetchCol();
+
+  // Load nodes
+  $nodes = node_load_multiple($nids);
+
+  // If updated option is sent, only return the latest changed value.
+  if ($_GET['updated'] == 1) {
+    $latest = current($nodes);
+    $changed = 0;
+    // Loop through all nodes just in case some are sticky
+    foreach ($nodes as $node) {
+      if ($node->changed > $changed) {
+        $changed = $node->changed;
+      }
+    }
+    cache_set($cid, array('updated' => $changed), 'cache', 3600);
+    return array('updated' => $changed);
+  }
+
+  // Get the view_mode parameter
+  if ($_GET['view_mode']) {
+    $view_mode = check_plain($_GET['view_mode']);
+  }
+  else {
+    $view_mode = 'teaser';
+  }
+
+  // Load view of nodes
+  $nodes = node_view_multiple($nodes, $view_mode);
+
+  // Build array of node field output
+  foreach ($nodes['nodes'] as $key => $node) {
+    $output[$key]['title'] = l($node['#node']->title, 'node/' . $node['#node']->nid, array('absolute' => TRUE));
+    $output[$key]['body'] = render($node['body']);
+    $output[$key]['thumbnail'] = l(render($node['field_article_thumbnail']), 'node/' . $node['#node']->nid, array('absolute' => TRUE, 'html' => TRUE));
+    $output[$key]['created'] = $node['#node']->created;
+  }
+
+  // Cache the output for future requests
+  cache_set($cid, $output, 'cache', 3600);
+  return $output;
+}
+
+/**
+ * Return options for term reference fields.
+ */
+function cu_article_syndicate_feed_options($option = NULL) {
+  if ($option) {
+    $option = check_plain($option);
+    // Load vocabulary for filter
+    $vocabulary = taxonomy_vocabulary_machine_name_load($option);
+    // Get terms for vocabulary
+    $terms = taxonomy_get_tree($vocabulary->vid);
+    return $terms;
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ *
+ * Clear the syndicate cache when an article node is updated.
+ */
+function cu_article_syndicate_node_update($node) {
+  if ($node->type == 'article') {
+    cache_clear_all('cu_article_syndicate:', 'cache', TRUE);
+  }
+}
+
+/**
+ * Implements hook_node_insert().
+ *
+ * Clear the syndicate cache when an article node is updated.
+ */
+function cu_article_syndicate_node_insert($node) {
+  if ($node->type == 'article') {
+    cache_clear_all('cu_article_syndicate:', 'cache', TRUE);
+  }
+}
+
+/**
+ * Implements hook_node_delete().
+ *
+ * Clear the syndicate cache when an article node is deleted.
+ */
+function cu_article_syndicate_node_delete($node) {
+  if ($node->type == 'article') {
+    cache_clear_all('cu_article_syndicate:', 'cache', TRUE);
+  }
+}
+
+function cu_article_syndicate_results() {
+  drupal_set_breadcrumb(array(l('Home', '<front>')));
+  $output = array();
+  // Start basic query of published articles
+  $query = db_select('node', 'n');
+  $query = $query->extend('PagerDefault')->limit(10);
+
+  $query->condition('n.type', 'article', '=');
+  $query->condition('n.status', 1, '=');
+  $query->fields('n', array('nid', 'title', 'sticky'));
+  $query->orderBy('sticky', 'DESC');
+  $query->orderBy('created', 'DESC');
+
+  // Add condition for unit
+  if ($_GET['unit']) {
+    $unit = check_plain($_GET['unit']);
+    $terms = array();
+    $unit = explode('+', $unit);
+    foreach ($unit as $key=>$value) {
+      $tid = $value;
+      $terms[$tid] = $tid;
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('syndication_unit');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+    }
+    if (!empty($terms)){
+      $query->join("field_data_field_adv_article_synd_unit", "unit", "n.nid = unit.entity_id");
+      $query->fields('unit', array('field_adv_article_synd_unit_tid'));
+      $query->condition('unit.field_adv_article_synd_unit_tid', $terms, 'in');
+    }
+  }
+
+  // Add condition for audience
+  if ($_GET['audience']) {
+    $audience = check_plain($_GET['audience']);
+    $terms = array();
+    $audience = explode('+', $audience);
+    foreach ($audience as $key=>$value) {
+      $tid = $value;
+      $terms[$tid] = $tid;
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('syndication_audience');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+    }
+    if (!empty($terms)){
+      $query->join("field_data_field_adv_article_synd_aud", "aud", "n.nid = aud.entity_id");
+      $query->fields('aud', array('field_adv_article_synd_aud_tid'));
+      $query->condition('aud.field_adv_article_synd_aud_tid', $terms, 'in');
+    }
+  }
+
+  // Add condition for category
+  if ($_GET['category']) {
+    $category = check_plain($_GET['category']);
+    $terms = array();
+    $category = explode('+', $category);
+    foreach ($category as $key=>$value) {
+      $tid = $value;
+      $terms[$tid] = $tid;
+      // Look up children terms and add them to array
+      $v = taxonomy_vocabulary_machine_name_load('category');
+      $children = taxonomy_get_tree($v->vid, $tid);
+      foreach ($children as $child) {
+        $terms[$child->tid] = $child->tid;
+      }
+    }
+    if (!empty($terms)){
+      $query->join("field_data_field_article_categories", "cats", "n.nid = cats.entity_id");
+      $query->fields('cats', array('field_article_categories_tid'));
+      $query->condition('cats.field_article_categories_tid', $terms, 'in');
+    }
+  }
+
+  // Make sure only one instance of each article is returned
+  $query->distinct();
+  $query->groupBy('n.nid');
+  $nids = $query->execute()->fetchCol();
+  // Load nodes
+  $nodes = node_load_multiple($nids);
+  $view_mode = 'teaser';
+
+  // Load view of nodes
+  $output['articles'] = node_view_multiple($nodes, $view_mode);
+  $output['pager'] = array(
+    '#theme' => 'pager',
+    '#tags' => array(),
+    '#weight' => 100.
+  );
+
+  return $output;
+}

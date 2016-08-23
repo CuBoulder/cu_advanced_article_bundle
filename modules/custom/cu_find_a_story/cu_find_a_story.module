@@ -1,0 +1,48 @@
+<?php
+/**
+ * @file
+ * Code for the Find a Story feature.
+ */
+
+include_once 'cu_find_a_story.features.inc';
+
+/**
+ * Implements hook_theme_registry_alter().
+ */
+function cu_find_a_story_theme_registry_alter(&$theme_registry) {
+  $module_path = drupal_get_path('module', 'cu_find_a_story');
+  $theme_registry_copy = $theme_registry;
+  _theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'cu_find_a_story', $module_path);
+  $theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
+  $hooks = array('cu_find_a_story');
+  foreach ($hooks as $h) {
+    if (isset($theme_registry[$h]['theme paths'])) {
+      $first_element = array_shift($theme_registry[$h]['theme paths']);
+      array_unshift($theme_registry[$h]['theme paths'], array_shift($theme_registry[$h]['theme paths']), $module_path);
+    }
+  }
+}
+
+function cu_find_a_story_form_alter(&$form, &$form_state, $form_id) {
+
+  if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-find-a-story-page') {
+    // Remove hidden terms from category filter
+    foreach ($form['term_node_tid_depth']['#options'] as $key => $option) {
+      //dpm($option);
+      if (!empty($option->option)) {
+        $tid = current(array_keys($option->option));
+        if (!_cu_find_a_story_term_display($tid)) {
+          unset($form['term_node_tid_depth']['#options'][$key]);
+        }
+      }
+    }
+  }
+}
+
+function _cu_find_a_story_term_display($tid) {
+  $term = taxonomy_term_load($tid);
+  if (!empty($term->field_category_display) && $term->field_category_display[LANGUAGE_NONE][0]['value'] == 'hide') {
+    return FALSE;
+  }
+  return TRUE;
+}

@@ -1,0 +1,148 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function cu_taxonomy_edit_disable_menu() {
+  $items['admin/config/user-interface/taxonomy-edit-disable'] = array(
+    'title' => 'Taxonomy Edit Disable',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('cu_taxonomy_edit_disable_config_form'),
+    'access arguments' => array('disable taxonomy edit'),
+    'weight' => 8,
+    'description' => 'Disable vocabularies and their terms from editing.',
+  );
+  return $items;
+}
+
+function cu_taxonomy_edit_disable_config_form($form, &$form_state) {
+  $form = array();
+
+  $vocabularies = taxonomy_vocabulary_get_names();
+  $options = array();
+  foreach ($vocabularies as $key => $vocabulary) {
+    $options[$key] = $vocabulary->name;
+  }
+  asort($options);
+  $form['cu_taxonomy_edit_disable'] = array(
+    '#type' => 'checkboxes',
+    '#options' => $options,
+    '#title' => t('Vocabularies to disable'),
+    '#default_value' => variable_get('cu_taxonomy_edit_disable', array()),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save configuration',
+  );
+  $form['#submit'][] = 'cu_taxonomy_edit_disable_config_form_submit';
+  //$form = system_settings_form($form);
+  return $form;
+}
+
+function cu_taxonomy_edit_disable_config_form_submit($form, &$form_state) {
+  $cu_taxonomy_edit_disable = $form_state['values']['cu_taxonomy_edit_disable'];
+  variable_set('cu_taxonomy_edit_disable', $cu_taxonomy_edit_disable);
+  if (function_exists('secure_permissions_rebuild')) {
+    secure_permissions_rebuild();
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Disable form elements if taxonomy has been disabled.
+ */
+function cu_taxonomy_edit_disable_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
+  _cu_taxonomy_edit_disable_form_disable($form);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Disable form elements if taxonomy has been disabled.
+ */
+function cu_taxonomy_edit_disable_form_taxonomy_overview_terms_alter(&$form, &$form_state, $form_id) {
+  _cu_taxonomy_edit_disable_form_disable($form);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Disable form elements if taxonomy has been disabled.
+ */
+function cu_taxonomy_edit_disable_form_taxonomy_form_vocabulary_alter(&$form, &$form_state, $form_id) {
+  _cu_taxonomy_edit_disable_form_disable($form);
+}
+
+/**
+ * Disables form elements.
+ */
+function _cu_taxonomy_edit_disable_form_disable(&$form) {
+  if (!user_access('edit disabled taxonomies')) {
+    $disabled = variable_get('cu_taxonomy_edit_disable', array());
+    if (in_array($form['#vocabulary']->machine_name, $disabled, true)) {
+      $form['#after_build'][] = '_cu_taxonomy_edit_disable_recursive';
+      drupal_set_message(t('Editing for this vocabulary has been disabled.'), 'warning');
+    }
+  }
+}
+
+function _cu_taxonomy_edit_disable_recursive(&$element) {
+  foreach (element_children($element) as $name) {
+    $element[$name]['#attributes']['disabled'] = 'disabled';
+    _cu_taxonomy_edit_disable_recursive($element[$name]);
+  }
+  return $element;
+}
+
+
+/**
+ * Implements hook_permission().
+ */
+function cu_taxonomy_edit_disable_permission() {
+  return array(
+    'disable taxonomy edit' => array(
+      'title' => t('Disable taxonomies from being edited'),
+    ),
+    'edit disabled taxonomies' => array(
+      'title' => t('Edit disabled taxonomies.'),
+    ),
+  );
+}
+/*
+ * Implements hook_secure_permissions
+ *
+ * Adding permissions for RSS bean
+ */
+function cu_taxonomy_edit_disable_secure_permissions($role) {
+  $permissions = array();
+  $permissions['anonymous user'] = array();
+  $permissions['authenticated user'] = array();
+  $permissions['administrator'] = cu_taxonomy_edit_disable_create_permissions($all = TRUE);
+  $permissions['administrator'][] = 'disable taxonomy edit';
+  $permissions['administrator'][] = 'edit disabled taxonomies';
+  $permissions['content_editor'] = cu_taxonomy_edit_disable_create_permissions();
+  $permissions['developer'] = cu_taxonomy_edit_disable_create_permissions($all = TRUE);
+  $permissions['developer'][] = 'disable taxonomy edit';
+  $permissions['developer'][] = 'edit disabled taxonomies';
+  $permissions['site_owner'] = cu_taxonomy_edit_disable_create_permissions();
+
+  if (isset($permissions[$role])) {
+    return $permissions[$role];
+  }
+}
+
+function cu_taxonomy_edit_disable_create_permissions($all = FALSE) {
+  $permissions = array();
+  $vocabulary = taxonomy_get_vocabularies();
+  $disabled = variable_get('cu_taxonomy_edit_disable', array());
+  foreach ($vocabulary as $item) {
+    if ($all) {
+      $permissions[] = 'add_terms_' . $item->machine_name;
+    }
+    elseif (!in_array($item->machine_name, $disabled, true)) {
+      $permissions[] = 'add_terms_' . $item->machine_name;
+    }
+  }
+  return $permissions;
+}

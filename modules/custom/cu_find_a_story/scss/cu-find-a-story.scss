@@ -1,0 +1,44 @@
+.view-find-a-story {
+  input, select {
+    font-size:11px;
+  }
+  input.form-text {
+    padding: 5px;
+  }
+  button, input[type="reset"], input[type="submit"], input[type="button"] {
+    font-size: 11px;
+
+  }
+  .views-exposed-form {
+    background-color: #e7e7e7;
+    padding:0 10px;
+    margin-bottom: 20px;
+    .description {
+      display: none;
+    }
+  }
+  .views-exposed-form label {
+    font-size: 85%;
+  }
+  .views-exposed-form .views-exposed-widget .form-submit {
+    margin-top: 2.6em;
+  }
+  .views-exposed-form .views-exposed-widget {
+    padding-bottom: 10px;
+  }
+  #edit-combine-wrapper {
+    padding-bottom: 0;
+    input.form-text {
+      background-color: #fff;
+    }
+  }
+  @media screen and (max-width:768px) {
+    #edit-combine-wrapper {
+      float: none;
+      margin-right: -1em;
+      input.form-text {
+        width:100%;
+      }
+    }
+  }
+}
