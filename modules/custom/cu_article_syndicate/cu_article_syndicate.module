@@ -1,5 +1,21 @@
 <?php
 
+/**
+* Implements hook_schema().
+*/
+function cu_article_syndicate_module_schema() {
+  $schema = array();
+  $schema['cu_article_syndicate'] = drupal_get_schema_unprocessed('system', 'cache');
+  return $schema;
+}
+
+/**
+* Implements hook_flush_caches().
+*/
+function cu_article_syndicate_flush_caches() {
+  return array('cu_article_syndicate');
+}
+
 function cu_article_syndicate_menu() {
   $items = array();
   $items['syndicate/article'] = array(
@@ -155,7 +171,7 @@ function cu_article_syndicate_feed($unit, $audience, $category, $view_mode = 'te
         $changed = $node->changed;
       }
     }
-    cache_set($cid, array('updated' => $changed), 'cache', 3600);
+    cache_set($cid, array('updated' => $changed), 'cu_article_syndicate', 3600);
     return array('updated' => $changed);
   }
 
@@ -174,12 +190,15 @@ function cu_article_syndicate_feed($unit, $audience, $category, $view_mode = 'te
   foreach ($nodes['nodes'] as $key => $node) {
     $output[$key]['title'] = l($node['#node']->title, 'node/' . $node['#node']->nid, array('absolute' => TRUE));
     $output[$key]['body'] = render($node['body']);
-    $output[$key]['thumbnail'] = l(render($node['field_article_thumbnail']), 'node/' . $node['#node']->nid, array('absolute' => TRUE, 'html' => TRUE));
+    if (!empty($node['field_article_thumbnail'])) {
+      $output[$key]['thumbnail'] = l(render($node['field_article_thumbnail']), 'node/' . $node['#node']->nid, array('absolute' => TRUE, 'html' => TRUE));
+    }
     $output[$key]['created'] = $node['#node']->created;
+    $output[$key]['nid'] = $node['#node']->nid;
   }
 
   // Cache the output for future requests
-  cache_set($cid, $output, 'cache', 3600);
+  cache_set($cid, $output, 'cu_article_syndicate', 3600 * 24);
   return $output;
 }
 
@@ -204,7 +223,7 @@ function cu_article_syndicate_feed_options($option = NULL) {
  */
 function cu_article_syndicate_node_update($node) {
   if ($node->type == 'article') {
-    cache_clear_all('cu_article_syndicate:', 'cache', TRUE);
+    cache_clear_all('*', 'cu_article_syndicate', TRUE);
   }
 }
 
@@ -215,7 +234,7 @@ function cu_article_syndicate_node_update($node) {
  */
 function cu_article_syndicate_node_insert($node) {
   if ($node->type == 'article') {
-    cache_clear_all('cu_article_syndicate:', 'cache', TRUE);
+    cache_clear_all('*', 'cu_article_syndicate', TRUE);
   }
 }
 
@@ -226,7 +245,7 @@ function cu_article_syndicate_node_insert($node) {
  */
 function cu_article_syndicate_node_delete($node) {
   if ($node->type == 'article') {
-    cache_clear_all('cu_article_syndicate:', 'cache', TRUE);
+    cache_clear_all('*', 'cu_article_syndicate', TRUE);
   }
 }
 
