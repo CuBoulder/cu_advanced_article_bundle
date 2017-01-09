@@ -191,7 +191,8 @@ function cu_article_syndicate_feed($unit, $audience, $category, $view_mode = 'te
     $output[$key]['title'] = l($node['#node']->title, 'node/' . $node['#node']->nid, array('absolute' => TRUE));
     $output[$key]['body'] = render($node['body']);
     if (!empty($node['field_article_thumbnail'])) {
-      $output[$key]['thumbnail'] = l(render($node['field_article_thumbnail']), 'node/' . $node['#node']->nid, array('absolute' => TRUE, 'html' => TRUE));
+      $node['field_article_thumbnail'][0]['#path']['options']['absolute'] = TRUE;
+      $output[$key]['thumbnail'] = render($node['field_article_thumbnail']);
     }
     $output[$key]['created'] = $node['#node']->created;
     $output[$key]['nid'] = $node['#node']->nid;
