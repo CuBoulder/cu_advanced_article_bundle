@@ -122,7 +122,7 @@ function cu_advanced_article_preprocess_node(&$vars) {
       if (!empty($vars['field_adv_article_priority'])) {
         $priority_field = $vars['field_adv_article_priority'][LANGUAGE_NONE][0]['value'];
         // Get the first item of the priority field
-        if (!empty($vars['content'][$priority_field][0])) {
+        if (!empty($vars['content'][$priority_field]) && !empty($vars['content'][$priority_field][0])) {
           $vars['content']['priority'] = $vars['content'][$priority_field][0];
           // Remove the first item of the priority field so it doesn't print twice
           unset($vars['content'][$priority_field][0]);
