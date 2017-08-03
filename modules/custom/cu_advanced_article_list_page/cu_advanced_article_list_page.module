@@ -115,23 +115,23 @@ function cu_advanced_article_list_page_preprocess_node(&$vars) {
     }
     // Add exposed filter
     $variables = array(
-      'expose_category_filter' => $vars['field_article_page_cat_expose'][LANGUAGE_NONE][0]['value'],
+      'expose_category_filter' => !empty($vars['field_article_page_cat_expose']) ?  $vars['field_article_page_cat_expose'][LANGUAGE_NONE][0]['value'] : NULL,
 
-      'article_category_prefilter' => $vars['field_article_page_category'][LANGUAGE_NONE],
+      'article_category_prefilter' => !empty($vars['field_article_page_category']) ?  $vars['field_article_page_category'][LANGUAGE_NONE] : NULL,
 
-      'expose_tag_filter' => $vars['field_article_page_tag_expose'][LANGUAGE_NONE][0]['value'],
+      'expose_tag_filter' => !empty($vars['field_article_page_tag_expose']) ?  $vars['field_article_page_tag_expose'][LANGUAGE_NONE][0]['value'] : NULL,
 
-      'article_tag_prefilter' => $vars['field_article_page_filter'][LANGUAGE_NONE],
+      'article_tag_prefilter' => !empty($vars['field_article_page_filter']) ?  $vars['field_article_page_filter'][LANGUAGE_NONE] : NULL,
 
-      'expose_media_filter' => $vars['field_article_page_media_expose'][LANGUAGE_NONE][0]['value'],
+      'expose_media_filter' => !empty($vars['field_article_page_media_expose']) ?  $vars['field_article_page_media_expose'][LANGUAGE_NONE][0]['value'] : NULL,
 
       'article_media_prefilter' => !empty($vars['field_article_page_media']) ? $vars['field_article_page_media'][LANGUAGE_NONE] : NULL,
 
-      'expose_audience_filter' => $vars['field_article_page_aud_expose'][LANGUAGE_NONE][0]['value'],
+      'expose_audience_filter' => !empty($vars['field_article_page_aud_expose']) ?  $vars['field_article_page_aud_expose'][LANGUAGE_NONE][0]['value'] : NULL,
 
       'article_audience_prefilter' => !empty($vars['field_article_page_audience']) ?  $vars['field_article_page_audience'][LANGUAGE_NONE] : NULL,
 
-      'child_terms' => $vars['field_article_page_childterms'][LANGUAGE_NONE][0]['value'],
+      'child_terms' => !empty($vars['field_article_page_childterms']) ?  $vars['field_article_page_childterms'][LANGUAGE_NONE][0]['value'] : NULL,
 
     );
 
