@@ -16,7 +16,7 @@ function cu_advanced_article_list_page_preprocess_node(&$vars) {
     $query = $query->extend('PagerDefault')->limit(10);
 
     // Filter by tag.
-    if ($_GET['tags']) {
+    if (isset($_GET['tags'])) {
       $terms = array();
       $terms[$tid] = check_plain($_GET['tags']);
       $tid = check_plain($_GET['tags']);
@@ -32,7 +32,7 @@ function cu_advanced_article_list_page_preprocess_node(&$vars) {
     }
 
     // Filter by category.
-    if ($_GET['category']) {
+    if (isset($_GET['category'])) {
       $terms = array();
       $terms[$tid] = check_plain($_GET['category']);
       $tid = check_plain($_GET['category']);
@@ -48,7 +48,7 @@ function cu_advanced_article_list_page_preprocess_node(&$vars) {
     }
 
     // Filter by media.
-    if ($_GET['media']) {
+    if (isset($_GET['media'])) {
       $terms = array();
       $terms[$tid] = check_plain($_GET['media']);
       $tid = check_plain($_GET['media']);
@@ -63,7 +63,7 @@ function cu_advanced_article_list_page_preprocess_node(&$vars) {
       $query->condition('media.field_adv_article_media_tid', $terms, 'in');
     }
     // Filter by audience.
-    if ($_GET['audience']) {
+    if (isset($_GET['audience'])) {
       $terms = array();
       $terms[$tid] = check_plain($_GET['audience']);
       $tid = check_plain($_GET['audience']);
@@ -115,25 +115,26 @@ function cu_advanced_article_list_page_preprocess_node(&$vars) {
     }
     // Add exposed filter
     $variables = array(
-      'expose_category_filter' => $vars['field_article_page_cat_expose'][LANGUAGE_NONE][0]['value'],
+      'expose_category_filter' => !empty($vars['field_article_page_cat_expose']) ?  $vars['field_article_page_cat_expose'][LANGUAGE_NONE][0]['value'] : NULL,
 
-      'article_category_prefilter' => $vars['field_article_page_category'][LANGUAGE_NONE],
+      'article_category_prefilter' => !empty($vars['field_article_page_category']) ?  $vars['field_article_page_category'][LANGUAGE_NONE] : NULL,
 
-      'expose_tag_filter' => $vars['field_article_page_tag_expose'][LANGUAGE_NONE][0]['value'],
+      'expose_tag_filter' => !empty($vars['field_article_page_tag_expose']) ?  $vars['field_article_page_tag_expose'][LANGUAGE_NONE][0]['value'] : NULL,
 
-      'article_tag_prefilter' => $vars['field_article_page_filter'][LANGUAGE_NONE],
+      'article_tag_prefilter' => !empty($vars['field_article_page_filter']) ?  $vars['field_article_page_filter'][LANGUAGE_NONE] : NULL,
 
-      'expose_media_filter' => $vars['field_article_page_media_expose'][LANGUAGE_NONE][0]['value'],
+      'expose_media_filter' => !empty($vars['field_article_page_media_expose']) ?  $vars['field_article_page_media_expose'][LANGUAGE_NONE][0]['value'] : NULL,
 
-      'article_media_prefilter' => $vars['field_article_page_media'][LANGUAGE_NONE],
+      'article_media_prefilter' => !empty($vars['field_article_page_media']) ? $vars['field_article_page_media'][LANGUAGE_NONE] : NULL,
 
-      'expose_audience_filter' => $vars['field_article_page_aud_expose'][LANGUAGE_NONE][0]['value'],
+      'expose_audience_filter' => !empty($vars['field_article_page_aud_expose']) ?  $vars['field_article_page_aud_expose'][LANGUAGE_NONE][0]['value'] : NULL,
 
-      'article_audience_prefilter' => $vars['field_article_page_audience'][LANGUAGE_NONE],
+      'article_audience_prefilter' => !empty($vars['field_article_page_audience']) ?  $vars['field_article_page_audience'][LANGUAGE_NONE] : NULL,
 
-      'child_terms' => $vars['field_article_page_childterms'][LANGUAGE_NONE][0]['value'],
+      'child_terms' => !empty($vars['field_article_page_childterms']) ?  $vars['field_article_page_childterms'][LANGUAGE_NONE][0]['value'] : NULL,
 
     );
+
     $vars['content']['exposed_filter'] = drupal_get_form('cu_advanced_article_list_page_filter_form', $variables);
     $vars['content']['exposed_filter']['#weight'] = 5;
   }
