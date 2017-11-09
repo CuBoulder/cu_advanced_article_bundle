@@ -54,7 +54,7 @@ function cu_article_syndicate_access() {
  *
  * Returns JSON of articles.
  */
-function cu_article_syndicate_feed($unit, $audience, $category, $view_mode = 'teaser') {
+function cu_article_syndicate_feed($view_mode = 'teaser') {
 
   if (!cu_article_syndicate_access()) {
     return array('error' => 'Syndication is disabled');
