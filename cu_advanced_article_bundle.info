@@ -11,5 +11,4 @@ dependencies[] = cu_advanced_article_list_page
 dependencies[] = cu_article_syndicate
 dependencies[] = cu_find_a_story
 dependencies[] = cu_taxonomy_edit_disable
-
-bundle_contrib_packages = taxonomy_autocomplete_permission
+dependencies[] = taxonomy_autocomplete_permission
