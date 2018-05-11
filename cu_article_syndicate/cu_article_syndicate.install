@@ -4,6 +4,6 @@
 */
 function cu_article_syndicate_schema() {
   $schema = array();
-  $schema['syndicated_article'] = drupal_get_schema_unprocessed('system', 'cache');
+  $schema['cache_syndicated_article'] = drupal_get_schema_unprocessed('system', 'cache');
   return $schema;
 }
