@@ -349,6 +349,19 @@ function cu_article_view_toggle_secure_permissions($role) {
       'edit any article_grid_list bean',
       'view any article_grid_list bean',
     ),
+    'edit_my_content' => array(
+      'view any article_grid_list bean',
+    ),
+    'edit_only' => array(
+      'edit any article_grid_list bean',
+      'view any article_grid_list bean',
+    ),
+    'site_editor' => array(
+      'create any article_grid_list bean',
+      'delete any article_grid_list bean',
+      'edit any article_grid_list bean',
+      'view any article_grid_list bean',
+    ),
     'site_owner' => array(
       'create any article_grid_list bean',
       'delete any article_grid_list bean',
