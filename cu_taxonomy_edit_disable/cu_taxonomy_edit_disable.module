@@ -129,7 +129,7 @@ function cu_taxonomy_edit_disable_secure_permissions($role) {
   $permissions['edit_my_own'] = cu_taxonomy_edit_disable_create_permissions();
   $permissions['edit_only'] = cu_taxonomy_edit_disable_create_permissions();
   $permissions['site_editor'] = cu_taxonomy_edit_disable_create_permissions();
-    
+
   if (isset($permissions[$role])) {
     return $permissions[$role];
   }
