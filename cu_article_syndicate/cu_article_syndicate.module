@@ -65,7 +65,7 @@ function cu_article_syndicate_feed($view_mode = 'teaser') {
   $output = array();
   // Start basic query of published articles
   $query = db_select('node', 'n');
-  if ($_GET['items']) {
+  if (isset($_GET['items'])) {
     $items = check_plain($_GET['items']);
   }
   else {
@@ -79,7 +79,7 @@ function cu_article_syndicate_feed($view_mode = 'teaser') {
   $query->orderBy('created', 'DESC');
 
   // Add condition for unit
-  if ($_GET['unit']) {
+  if (isset($_GET['unit'])) {
     $unit = check_plain($_GET['unit']);
     $terms = array();
     $unit = explode('+', $unit);
@@ -101,7 +101,7 @@ function cu_article_syndicate_feed($view_mode = 'teaser') {
   }
 
   // Add condition for audience
-  if ($_GET['audience']) {
+  if (isset($_GET['audience'])) {
     $audience = check_plain($_GET['audience']);
     $terms = array();
     $audience = explode('+', $audience);
@@ -123,7 +123,7 @@ function cu_article_syndicate_feed($view_mode = 'teaser') {
   }
 
   // Add condition for category
-  if ($_GET['category']) {
+  if (isset($_GET['category'])) {
     $category = check_plain($_GET['category']);
     $terms = array();
     $category = explode('+', $category);
@@ -153,7 +153,7 @@ function cu_article_syndicate_feed($view_mode = 'teaser') {
   $nodes = node_load_multiple($nids);
 
   // If updated option is sent, only return the latest changed value.
-  if ($_GET['updated'] == 1) {
+  if (isset($_GET['updated']) && $_GET['updated'] == 1) {
     $latest = current($nodes);
     $changed = 0;
     // Loop through all nodes just in case some are sticky
@@ -167,7 +167,7 @@ function cu_article_syndicate_feed($view_mode = 'teaser') {
   }
 
   // Get the view_mode parameter
-  if ($_GET['view_mode']) {
+  if (isset($_GET['view_mode'])) {
     $view_mode = check_plain($_GET['view_mode']);
   }
   else {
@@ -176,7 +176,9 @@ function cu_article_syndicate_feed($view_mode = 'teaser') {
 
   // Load view of nodes
   $nodes = node_view_multiple($nodes, $view_mode);
-
+  if (!empty($nodes['nodes'])) {
+    unset($nodes['nodes']['#sorted']);
+  }
   // Build array of node field output
   foreach ($nodes['nodes'] as $key => $node) {
     $output[$key]['title'] = l($node['#node']->title, 'node/' . $node['#node']->nid, array('absolute' => TRUE));
