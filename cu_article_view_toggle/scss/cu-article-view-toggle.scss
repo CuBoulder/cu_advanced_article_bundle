@@ -2,8 +2,17 @@
   font-size: 100%;
 }
 .article-grid-list-filter {
+
+  form > div {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
   position: relative;
   background-color: #f2f2f2;
+  color:#333;
   padding:10px 10px 0;
   margin-bottom: 20px;
   .article-list-filter {
@@ -61,13 +70,13 @@
 .article-toggle-navigation ul li {
   //display: inline;
 }
-.article-toggle-navigation a:link,
-.article-toggle-navigation a:visited {
+.article-grid-list .article-toggle-navigation a:link,
+.article-grid-list .article-toggle-navigation a:visited {
   display: inline-block;
   padding: 5px 10px;
   color:#333;
 }
-.article-toggle-navigation a.active {
+.article-grid-list .article-toggle-navigation a.active {
   color:#fff;
   background-color: #333;
 }

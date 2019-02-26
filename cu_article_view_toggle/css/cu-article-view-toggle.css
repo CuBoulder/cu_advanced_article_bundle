@@ -1,6 +1,7 @@
 .article-grid-list h3 { font-size: 100%; }
 
-.article-grid-list-filter { position: relative; background-color: #f2f2f2; padding: 10px 10px 0; margin-bottom: 20px; }
+.article-grid-list-filter { position: relative; background-color: #f2f2f2; color: #333; padding: 10px 10px 0; margin-bottom: 20px; }
+.article-grid-list-filter form > div { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; }
 .article-grid-list-filter .article-list-filter { padding-left: 92px; background-color: transparent; padding: 0; padding-right: 100px; display: inline-block; margin-bottom: 0px; }
 
 .block-section-background-black .article-grid-list-filter, .block-section-background-dark_gray .article-grid-list-filter { background-color: #444; }
@@ -15,9 +16,9 @@
 
 .article-toggle-navigation ul, .article-toggle-navigation ul li { list-style: none; list-style-image: none; margin: 0; padding: 0; display: inline; }
 
-.article-toggle-navigation a:link, .article-toggle-navigation a:visited { display: inline-block; padding: 5px 10px; color: #333; }
+.article-grid-list .article-toggle-navigation a:link, .article-grid-list .article-toggle-navigation a:visited { display: inline-block; padding: 5px 10px; color: #333; }
 
-.article-toggle-navigation a.active { color: #fff; background-color: #333; }
+.article-grid-list .article-toggle-navigation a.active { color: #fff; background-color: #333; }
 
 .article-view-toggle-link .more-link { text-align: center; }
 
