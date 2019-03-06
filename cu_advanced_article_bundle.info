@@ -1,7 +1,7 @@
 name = Advanced Article Bundle
 description = Adds some advanced fields and configs for articles
 core = 7.x
-version = 7.x-1.2
+version = 7.x-1.3
 project = cu_advanced_article_bundle
 project status url = https://github.com/CuBoulder/cu_advanced_article_bundle
 
